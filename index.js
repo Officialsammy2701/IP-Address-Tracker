@@ -3,77 +3,83 @@ let mymap = null;
 
 function displayLoading() {
     loader.classList.add("display");
-
-    setTimeout(() => {
-        loader.classList.remove("display");
-    }, 20000);
 }
 
 function hideLoading() {
     loader.classList.remove("display");
 }
 
-let ipTracker = {
-    key: "at_AmOTQApybsh7EYLZgDtnZeOLPtMjL",
+const ipTracker = {
+    key: "at_p9z5lCEoJcUTVHZCZrLYQkB44d05v", 
 
-    domain: "",
-
-    fecthIp: function (ipAddress) {
+    fetchIp(ipAddress) {
         displayLoading();
 
-        fetch(`https://geo.ipify.org/api/v1?apiKey=${this.key}&ipAddress=${ipAddress}`) // &domain=${this.domain}
-        .then((response) => response.json())
-        .then((data) => {
-            this.displayData(data);
-            console.log(data);
-        })
-        .catch((error) => this.handleErrors(error));
+        fetch(`https://geo.ipify.org/api/v2/country,city?apiKey=${this.key}&ipAddress=${ipAddress}`)
+            .then((response) =>
+                response.json().then((data) => {
+                    if (!response.ok) {
+                        throw new Error(data.messages || data.message || "API request failed");
+                    }
+                    return data;
+                })
+            )
+            .then((data) => {
+                if (!data.location) {
+                    throw new Error("No location data returned");
+                }
+
+                this.displayData(data);
+            })
+            .catch((error) => this.handleErrors(error))
+            .finally(() => hideLoading());
     },
 
-    displayData: function (data) {
-        hideLoading();
-        let { lat } = data.location;
-        let { lng } = data.location;
+    displayData(data) {
+        const { lat, lng, city, country, region, timezone } = data.location;
+        const { ip, isp } = data;
+
+        if (mymap) {
+            mymap.remove();
+        }
 
         mymap = L.map("mapid").setView([lat, lng], 12);
 
-        L.tileLayer("https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
-            attribution:
-                'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-            maxZoom: 18,
-            id: "mapbox/streets-v11",
-            tileSize: 512,
-            zoomOffset: -1,
-            accessToken: "pk.eyJ1IjoiaXRzbWlsYWQiLCJhIjoiY2twdHg4YTJ2MDc1bzJvbnpkMzM1NTNnZCJ9.ES0tgt90-43JoRJEPO9RHg",
-        }).addTo(mymap);
-            
-            // let my Icon = L.icon({
-            //   iconUrl: "./img/icon-location.svg",
-            //   iconSize: [30, 40],
-            //   iconAnchor: [22, 94],
-            //   popupAnchor: [-3, -76],
-            //   shadowSize: [68, 95],
-            //   shadowAnchor: [22, 94],
-            // });
+        L.tileLayer(
+            "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
+            {
+                attribution:
+                    'Map data © OpenStreetMap contributors, Imagery © Mapbox',
+                maxZoom: 18,
+                id: "mapbox/streets-v11",
+                tileSize: 512,
+                zoomOffset: -1,
+                accessToken: "YOUR_MAPBOX_TOKEN",
+            }
+        ).addTo(mymap);
 
-            L.marker([lat, lng]).addTo(mymap);
+        L.marker([lat, lng]).addTo(mymap);
 
-            let { ip, isp } = data;
-            let { city, country, region, timezone } = data.location;
-
-            document.querySelector("#ipaddresss").innerHTML = ip;
-            document.querySelector("#location").innerHTML = `${city}, ${country}, ${region}`;
-            document.querySelector("#timezone").innerHTML = `UTC ${timezone}`;
-            document.querySelector("#isp").innerHTML = isp;
+        document.querySelector("#ipaddresss").textContent = ip || "--";
+        document.querySelector("#location").textContent = `${city || "--"}, ${country || "--"}, ${region || "--"}`;
+        document.querySelector("#timezone").textContent = `UTC ${timezone || "--"}`;
+        document.querySelector("#isp").textContent = isp || "--";
     },
 
-    handleErrors: function (error) {
-        console.log(error);
+    handleErrors(error) {
+        console.error(error);
+
+        document.querySelector("#ipaddresss").textContent = "--";
+        document.querySelector("#location").textContent = "Unable to load location";
+        document.querySelector("#timezone").textContent = "--";
+        document.querySelector("#isp").textContent = error.message;
     },
 
-    search: function () {
-        mymap.remove();
-        this.fecthIp(document.querySelector("#ip-input").value);
+    search() {
+        const input = document.querySelector("#ip-input").value.trim();
+        if (!input) return;
+
+        this.fetchIp(input);
     },
 };
 
@@ -81,5 +87,5 @@ document.querySelector("#search-btn").addEventListener("click", () => {
     ipTracker.search();
 });
 
-// default ip
-ipTracker.fecthIp("8.8.8.8");
+// default load
+ipTracker.fetchIp("8.8.8.8");
