@@ -10,12 +10,10 @@ function hideLoading() {
 }
 
 const ipTracker = {
-    key: "at_p9z5lCEoJcUTVHZCZrLYQkB44d05v", 
-
     fetchIp(ipAddress) {
         displayLoading();
 
-        fetch(`https://geo.ipify.org/api/v2/country,city?apiKey=${this.key}&ipAddress=${ipAddress}`)
+        fetch(`/api/ip?ip=${encodeURIComponent(ipAddress)}`)
             .then((response) =>
                 response.json().then((data) => {
                     if (!response.ok) {
@@ -45,18 +43,10 @@ const ipTracker = {
 
         mymap = L.map("mapid").setView([lat, lng], 12);
 
-        L.tileLayer(
-            "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
-            {
-                attribution:
-                    'Map data © OpenStreetMap contributors, Imagery © Mapbox',
-                maxZoom: 18,
-                id: "mapbox/streets-v11",
-                tileSize: 512,
-                zoomOffset: -1,
-                accessToken: "YOUR_MAPBOX_TOKEN",
-            }
-        ).addTo(mymap);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(mymap);
 
         L.marker([lat, lng]).addTo(mymap);
 
@@ -87,5 +77,4 @@ document.querySelector("#search-btn").addEventListener("click", () => {
     ipTracker.search();
 });
 
-// default load
 ipTracker.fetchIp("8.8.8.8");
